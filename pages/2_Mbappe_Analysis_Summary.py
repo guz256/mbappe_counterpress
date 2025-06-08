@@ -12,9 +12,8 @@ st.set_page_config(layout="centered")
 st.title("📊 Mbappé - Counterpress Summary")
 
 # === Paths ===
-DATA_FOLDER = r"C:\Users\guz_m\OneDrive\Escritorio\Guz\Twelve\Project 3\RealMadrid\RealMadrid"
-CSV_PATH = os.path.join(DATA_FOLDER, "csv", "counterpress_analysis_all.csv")
-META_PATH = os.path.join(DATA_FOLDER, "meta", "1712797.json")  # usás 1 como referencia
+CSV_PATH = os.path.join("csv", "counterpress_analysis_all.csv")
+META_PATH = os.path.join("meta", "1712797.json")
 
 # === Load pitch dimensions from meta ===
 with open(META_PATH, "r", encoding="utf-8") as f:

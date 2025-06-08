@@ -13,10 +13,9 @@ st.set_page_config(layout="wide")
 st.title("🔎 Counterpress Analysis Viewer")
 
 # === Configuration ===
-DATA_FOLDER = r"C:\Users\guz_m\OneDrive\Escritorio\Guz\Twelve\Project 3\RealMadrid\RealMadrid"
-CSV_PATH = os.path.join(DATA_FOLDER, "csv", "counterpress_analysis_all.csv")
-FREEZE_FOLDER = os.path.join(DATA_FOLDER, "freeze")
-META_FOLDER = os.path.join(DATA_FOLDER, "meta")
+CSV_PATH = os.path.join("csv", "counterpress_analysis_all.csv")
+META_FOLDER = "meta"
+FREEZE_FOLDER = "freeze"
 
 @st.cache_data
 def load_data():
@@ -188,7 +187,11 @@ if st.button("🎮 Export GIF animation"):
         buf.seek(0)
         images.append(Image.open(buf))
         plt.close(fig)
-    gif_path = os.path.join(DATA_FOLDER, f"{selected_player.lower().replace(' ', '_')}_sequence_{selected_match_id}_f{frame_loss}.gif")
+    output_filename = f"{selected_player.lower().replace(' ', '_')}_sequence_{selected_match_id}_f{frame_loss}.gif"
+    gif_path = os.path.join("output", output_filename)
+    os.makedirs("output", exist_ok=True)
+    with open(gif_path, "rb") as f:
+        st.download_button("📥 Download GIF", f, file_name=output_filename, mime="image/gif")
     images[0].save(gif_path, save_all=True, append_images=images[1:], duration=150, loop=0)
     st.success(f"✅ Animation exported: {gif_path}")
     st.image(images, caption=[f"Frame {f}" for f in frame_range[:len(images)]], width=800)

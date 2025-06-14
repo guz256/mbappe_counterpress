@@ -8,6 +8,7 @@ from mplsoccer import Pitch
 import matplotlib.pyplot as plt
 import io
 from PIL import Image
+from unidecode import unidecode
 
 st.set_page_config(layout="wide")
 st.title("🔎 Counterpress Analysis Viewer")
@@ -57,8 +58,30 @@ if not available_matches:
     st.warning("No matches available for this player and action filter.")
     st.stop()
 
-selected_match_id = st.sidebar.selectbox("Select match:", available_matches)
+# Crear etiquetas legibles con nombres de equipos
+match_labels = {}
+for match_id in available_matches:
+    try:
+        meta_path = os.path.join(META_FOLDER, f"{match_id}.json")
+        with open(meta_path, "r", encoding="utf-8") as f:
+            meta = json.load(f)
+
+        date = meta.get("date_time", "")[:10]
+        home = meta["home_team"]["short_name"]
+        away = meta["away_team"]["short_name"]
+        score = f"{meta['home_team_score']}–{meta['away_team_score']}"
+        label = f"{date} - {home} {score} {away}"
+        match_labels[label] = match_id
+    except Exception as e:
+        match_labels[f"{match_id} (missing meta)"] = match_id  # fallback en caso de error
+
+# Mostrar selectbox con etiquetas legibles
+selected_label = st.sidebar.selectbox("Select match:", list(match_labels.keys()))
+selected_match_id = match_labels[selected_label]
+
+# Filtrar dataframe por match seleccionado
 df_match = df_filtered_events[df_filtered_events["match_id"] == selected_match_id]
+
 
 # === Selección de jugada
 if df_match.empty:
@@ -152,6 +175,8 @@ ax.set_title(f"Freeze Frame {frame_to_display} (Match ID: {selected_match_id})",
 ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.05), ncol=3)
 st.pyplot(fig)
 
+from unidecode import unidecode  # agregar esto al inicio del script si no está
+
 # === Export GIF animation ===
 st.markdown("## 🎮 Generate animation")
 frame_padding = st.slider("How many frames before/after to include?", 10, 150, value=100, step=10)
@@ -174,7 +199,7 @@ if st.button("🎮 Export GIF animation"):
         ax.scatter(df_players["x"], df_players["y"], s=150,
                    color=df_players["jersey_color"], edgecolors="black", zorder=5)
         for _, row in df_players.iterrows():
-            ax.text(row["x"], row["y"], str(int(row["jersey_number"])),
+            ax.text(row["x"], row["y"], str(int(row["jersey_number"])) if not pd.isna(row["jersey_number"]) else "",
                     color=row["number_color"], fontsize=8, weight="bold",
                     ha="center", va="center", zorder=6)
         highlight = df_players[df_players["player_id"] == selected_id]
@@ -187,11 +212,17 @@ if st.button("🎮 Export GIF animation"):
         buf.seek(0)
         images.append(Image.open(buf))
         plt.close(fig)
-    output_filename = f"{selected_player.lower().replace(' ', '_')}_sequence_{selected_match_id}_f{frame_loss}.gif"
-    gif_path = os.path.join("output", output_filename)
+
+    # Guardar primero el archivo
     os.makedirs("output", exist_ok=True)
+    clean_player = unidecode(selected_player.lower().replace(" ", "_"))
+    output_filename = f"{clean_player}_sequence_{selected_match_id}_f{frame_loss}.gif"
+    gif_path = os.path.join("output", output_filename)
+    images[0].save(gif_path, save_all=True, append_images=images[1:], duration=150, loop=0)
+
+    # Ahora abrirlo para la descarga
     with open(gif_path, "rb") as f:
         st.download_button("📥 Download GIF", f, file_name=output_filename, mime="image/gif")
-    images[0].save(gif_path, save_all=True, append_images=images[1:], duration=150, loop=0)
+
     st.success(f"✅ Animation exported: {gif_path}")
     st.image(images, caption=[f"Frame {f}" for f in frame_range[:len(images)]], width=800)
